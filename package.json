@@ -1,0 +1,30 @@
+{
+  "name": "mqttthing-xcomfort-shutter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "build/index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ToshB/mqttthing-xcomfort-shutter.git"
+  },
+  "author": "Torstein Bjørnstad <tosh@tosh.no>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ToshB/mqttthing-xcomfort-shutter/issues"
+  },
+  "homepage": "https://github.com/ToshB/mqttthing-xcomfort-shutter#readme",
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "jest": "^26.6.3",
+    "ts-jest": "^26.5.5",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.2.4"
+  }
+}
