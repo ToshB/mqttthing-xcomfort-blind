@@ -41,13 +41,13 @@ type EncoderFn<M> = (message: M, info: Info, output: OutputFn) => (string | void
 type DecoderFn<M> = (message: string, info: Info, output: OutputFn) => (M | void);
 
 interface PropCodec<M> {
-  encode?: EncoderFn<M>;
-  decode?: DecoderFn<M>;
+  encode: EncoderFn<M>;
+  decode: DecoderFn<M>;
 }
 
 
 type Codec = {
-  properties?: Partial<{[K in keyof Topics]: PropCodec<Topics[K]>}>
+  properties?: Partial<{[K in keyof Properties]: PropCodec<Properties[K]>}>
 } & (PropCodec<unknown> | {});
 
 export function init(params: Params): Codec {
@@ -56,15 +56,17 @@ export function init(params: Params): Codec {
   log(`Initializing xComfort Shutter Codec for ${config.name} with deviceId ${config.deviceId}`);
 
   config.type = 'windowCovering';
-  config.topics = {getPositionState: `xcomfort/${config.deviceId}/get/shutter`};
+  config.topics = {
+    getPositionState: `xcomfort/${config.deviceId}/get/shutter`
+  };
 
   notify('currentPosition', 0);
 
   return {
     properties: {
-      setTargetPosition: {
+      positionState: {
         encode: function (message){
-          log(`setTargetPosition: ${message}`);
+          log(`encode positionState: ${message}`);
           switch(message){
             case 100:
               return 'open';
@@ -73,24 +75,12 @@ export function init(params: Params): Codec {
             default:
               return 'stop';
           }
-        }
-      },
-      getPositionState:{
+        },
         decode: function (message){
           log(`getPositionState: ${message}`);
           log(`getPositionState2`, message);
-          switch(message){
-            case 'closing': {
-              return PositionStateValue.Closing;
-            }
-            case 'opening': {
-              return PositionStateValue.Opening;
-            }
-            case 'stopped': {
-              return PositionStateValue.Stopped;
-            }
-          }
         }
+
       }
     },
     encode(...args: any[]) {
