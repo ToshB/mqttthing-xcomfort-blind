@@ -24,7 +24,7 @@ interface AccessoryConfig {
 }
 
 interface Params {
-  log(message: string): void;
+  log(...message: any[]): void;
   config: AccessoryConfig;
   publish<T extends keyof Topics, M extends Topics[T]>(topic: T, message: M): void;
   notify<P extends keyof Properties, M extends Properties[P]>(property: P, message: M): void;
@@ -64,6 +64,7 @@ export function init(params: Params): Codec {
     properties: {
       setTargetPosition: {
         encode: function (message){
+          log(`setTargetPosition: ${message}`);
           switch(message){
             case 100:
               return 'open';
@@ -76,6 +77,8 @@ export function init(params: Params): Codec {
       },
       getPositionState:{
         decode: function (message){
+          log(`getPositionState: ${message}`);
+          log(`getPositionState2`, message);
           switch(message){
             case 'closing': {
               return PositionStateValue.Closing;
@@ -89,6 +92,14 @@ export function init(params: Params): Codec {
           }
         }
       }
+    },
+    encode(...args: any[]) {
+      log('encode', args);
+      return args[0];
+    },
+    decode(...args) {
+      log('decode', args);
+      return args[0];
     }
   }
 
