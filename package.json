@@ -7,7 +7,9 @@
     "test": "test"
   },
   "scripts": {
-    "build": "rm -rf build && tsc",
+    "build": "tsc",
+    "predeploy": "npm run build",
+    "deploy": "scp ./build/index.js pi@homebridge.local:~/.homebridge/xcomfort-shutter.js",
     "test": "jest"
   },
   "repository": {

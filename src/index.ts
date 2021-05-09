@@ -1,9 +1,8 @@
-enum PositionStateValue {
-  Closing,
-  Opening,
-  Stopped
-}
+type PositionStateValue = 'opening' | 'closing' | 'stopped';
 
+function notUndefined<T>(value: T | undefined) : value is T {
+  return typeof value !== 'undefined';
+}
 
 interface Properties {
   currentPosition: number;
@@ -13,20 +12,23 @@ interface Properties {
 
 interface Topics {
   getPositionState: Properties['positionState'],
-  setTargetPosition: Properties['targetPosition']
+  setTargetPosition: Properties['targetPosition'],
+  getTargetPosition: Properties['targetPosition']
+  getCurrentPosition: Properties['currentPosition']
 }
 
 interface AccessoryConfig {
   name: string;
   type: string;
+  positionStateValues: PositionStateValue[];
   topics: Partial<Record<keyof Topics, string>>;
-  deviceId: number;
+  topicBase: string;
 }
 
 interface Params {
-  log(...message: any[]): void;
+  log(message: string): void;
   config: AccessoryConfig;
-  publish<T extends keyof Topics, M extends Topics[T]>(topic: T, message: M): void;
+  publish(topic: string, message: string | number): void;
   notify<P extends keyof Properties, M extends Properties[P]>(property: P, message: M): void;
 }
 
@@ -41,56 +43,83 @@ type EncoderFn<M> = (message: M, info: Info, output: OutputFn) => (string | void
 type DecoderFn<M> = (message: string, info: Info, output: OutputFn) => (M | void);
 
 interface PropCodec<M> {
-  encode: EncoderFn<M>;
-  decode: DecoderFn<M>;
+  encode?: EncoderFn<M>;
+  decode?: DecoderFn<M>;
 }
 
 
 type Codec = {
   properties?: Partial<{[K in keyof Properties]: PropCodec<Properties[K]>}>
-} & (PropCodec<unknown> | {});
+} & (PropCodec<any> | {});
 
-export function init(params: Params): Codec {
+function init(params: Params): Codec {
   const {log, config, publish, notify} = params;
-
-  log(`Initializing xComfort Shutter Codec for ${config.name} with deviceId ${config.deviceId}`);
+  let targetPosition = 100;
+  let currentPosition  = 100;
+  let currentState : PositionStateValue = 'stopped';
+  log(`Initializing xComfort Shutter Codec for ${config.name} with topic base ${config.topicBase}`);
 
   config.type = 'windowCovering';
+  config.positionStateValues = ['closing', 'opening','stopped'];
   config.topics = {
-    getPositionState: `xcomfort/${config.deviceId}/get/shutter`
+    getPositionState: `${config.topicBase}/get/shutter`,
+    getTargetPosition: `${config.topicBase}/get/target`,
+    setTargetPosition: `${config.topicBase}/set/target`,
+    getCurrentPosition: `${config.topicBase}/get/current`
   };
 
-  notify('currentPosition', 0);
+  setTimeout(() => {
+    notify('targetPosition', targetPosition);
+    notify('currentPosition', currentPosition);
+    notify('positionState', currentState);
+  },0);
 
   return {
     properties: {
-      positionState: {
-        encode: function (message){
-          log(`encode positionState: ${message}`);
-          switch(message){
-            case 100:
-              return 'open';
-            case 0:
-              return 'close';
-            default:
-              return 'stop';
+      targetPosition: {
+        encode: function (message) {
+          if(message === 100){
+            targetPosition = 100;
+            publish(`${config.topicBase}/set/shutter`, 'open');
+          }else if(message === 0){
+            targetPosition = 0;
+            publish(`${config.topicBase}/set/shutter`, 'close');
+          }else{
+            targetPosition = 50;
+            publish(`${config.topicBase}/set/shutter`, 'stop');
           }
-        },
-        decode: function (message){
-          log(`getPositionState: ${message}`);
-          log(`getPositionState2`, message);
-        }
 
+          notify('targetPosition', targetPosition);
+        }
+      },
+      positionState: {
+        decode: function (message: PositionStateValue){
+          if(message == 'opening'){
+            targetPosition = 100;
+            notify('targetPosition', targetPosition);
+          }else if(message == 'closing'){
+            targetPosition = 0;
+            notify('targetPosition', targetPosition);
+          }else if(message == 'stopped'){
+            notify('currentPosition', targetPosition)
+            currentPosition = targetPosition;
+          }
+
+          currentState = message;
+          return message;
+        }
       }
     },
-    encode(...args: any[]) {
-      log('encode', args);
-      return args[0];
+    encode: function(message){
+      return message;
     },
-    decode(...args) {
-      log('decode', args);
-      return args[0];
+    decode: function(message){
+      return message;
     }
   }
 
+}
+
+module.exports = {
+  init
 }
